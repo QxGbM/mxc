@@ -71,15 +71,15 @@ void compute_factorize(deviceHandle_t handle, deviceMatrixDesc_t A, deviceMatrix
   long long rdim = bdim - rank;
   long long reduc_len = A.reducLen;
   int info_host = 0;
-  STD_CTYPE constants[3] = { 1., 0., -1. };
-  CUDA_CTYPE& one = reinterpret_cast<CUDA_CTYPE&>(constants[0]);
-  CUDA_CTYPE& zero = reinterpret_cast<CUDA_CTYPE&>(constants[1]); 
-  CUDA_CTYPE& minus_one = reinterpret_cast<CUDA_CTYPE&>(constants[2]); 
+  std::complex<double> constants[3] = { 1., 0., -1. };
+  cuDoubleComplex& one = reinterpret_cast<cuDoubleComplex&>(constants[0]);
+  cuDoubleComplex& zero = reinterpret_cast<cuDoubleComplex&>(constants[1]); 
+  cuDoubleComplex& minus_one = reinterpret_cast<cuDoubleComplex&>(constants[2]); 
 
   auto inc_iter = thrust::make_counting_iterator(0ll);
   auto mapV = thrust::make_transform_iterator(inc_iter, swapXY(bdim, bdim));
-  thrust::device_ptr<THRUST_CTYPE> Uptr(reinterpret_cast<THRUST_CTYPE*>(&(A.Udata)[D * block]));
-  thrust::device_ptr<THRUST_CTYPE> Vptr(reinterpret_cast<THRUST_CTYPE*>(A.Vdata));
+  thrust::device_ptr<thrust::complex<double>> Uptr(reinterpret_cast<thrust::complex<double>*>(&(A.Udata)[D * block]));
+  thrust::device_ptr<thrust::complex<double>> Vptr(reinterpret_cast<thrust::complex<double>*>(A.Vdata));
   thrust::gather(thrust::cuda::par.on(stream), mapV, mapV + (block * M), thrust::make_transform_iterator(Uptr, conjugateFunc()), Vptr);
   
   if (0 < lenL) {
@@ -89,9 +89,9 @@ void compute_factorize(deviceHandle_t handle, deviceMatrixDesc_t A, deviceMatrix
 
   if (M == 1) {
     if (A.MergeComm)
-      ncclAllReduce(const_cast<const CUDA_CTYPE*>(A.Adata), A.Adata, block * lenA * 2, ncclDouble, ncclSum, A.MergeComm, stream);
+      ncclAllReduce(const_cast<const cuDoubleComplex*>(A.Adata), A.Adata, block * lenA * 2, ncclDouble, ncclSum, A.MergeComm, stream);
     if (A.DupComm)
-      ncclBroadcast(const_cast<const CUDA_CTYPE*>(A.Adata), A.Adata, block * lenA * 2, ncclDouble, 0, A.DupComm, stream);
+      ncclBroadcast(const_cast<const cuDoubleComplex*>(A.Adata), A.Adata, block * lenA * 2, ncclDouble, 0, A.DupComm, stream);
   }
 
   cublasZgemmBatched(cublasH, CUBLAS_OP_N, CUBLAS_OP_T, bdim, bdim, bdim, &one, A.V_rows, bdim, A.A_ss, bdim, &zero, A.B_ind, bdim, M);
@@ -102,7 +102,7 @@ void compute_factorize(deviceHandle_t handle, deviceMatrixDesc_t A, deviceMatrix
 
   if (0 < rank) {
     cublasZgemmBatched(cublasH, CUBLAS_OP_N, CUBLAS_OP_T, rdim, rank, bdim, &one, A.V_R, bdim, A.B_ind, bdim, &zero, A.A_rs, bdim, M);
-    cudaMemsetAsync(A.ACdata, 0, reduc_len * M * rblock * sizeof(CUDA_CTYPE), stream);
+    cudaMemsetAsync(A.ACdata, 0, reduc_len * M * rblock * sizeof(cuDoubleComplex), stream);
 
     for (long long i = M; i < lenA; i += N) {
       long long len = std::min(lenA - i, N);
@@ -112,17 +112,17 @@ void compute_factorize(deviceHandle_t handle, deviceMatrixDesc_t A, deviceMatrix
 
     cublasZgemmBatched(cublasH, CUBLAS_OP_N, CUBLAS_OP_N, rank, rank, rdim, &minus_one, A.A_sr_rows, bdim, A.A_rs, bdim, &one, A.A_ss, bdim, lenA);
     cublasZgemmBatched(cublasH, CUBLAS_OP_N, CUBLAS_OP_N, rdim, rdim, bdim, &one, A.V_R, bdim, A.U_R, bdim, &zero, A.B_R, bdim, M);
-    thrust::for_each(thrust::cuda::par.on(stream), inc_iter, inc_iter + (rdim * rank * M), copyFunc(rdim, rank, const_cast<const CUDA_CTYPE**>(A.A_rs), bdim, &(A.B_ind)[D], bdim));
+    thrust::for_each(thrust::cuda::par.on(stream), inc_iter, inc_iter + (rdim * rank * M), copyFunc(rdim, rank, const_cast<const cuDoubleComplex**>(A.A_rs), bdim, &(A.B_ind)[D], bdim));
     
     ncclGroupStart();
     for (long long p = 0; p < A.LenComms; p++) {
       long long start = A.Neighbor[p] * block;
       long long len = A.Neighbor[p + 1] * block - start;
-      ncclBroadcast(const_cast<const CUDA_CTYPE*>(&(A.Bdata)[start]), &(A.Bdata)[start], len * 2, ncclDouble, A.NeighborRoots[p], A.NeighborComms[p], stream);
+      ncclBroadcast(const_cast<const cuDoubleComplex*>(&(A.Bdata)[start]), &(A.Bdata)[start], len * 2, ncclDouble, A.NeighborRoots[p], A.NeighborComms[p], stream);
     }
 
     if (A.DupComm)
-      ncclBroadcast(const_cast<const CUDA_CTYPE*>(A.Bdata), A.Bdata, block * N * 2, ncclDouble, 0, A.DupComm, stream);
+      ncclBroadcast(const_cast<const cuDoubleComplex*>(A.Bdata), A.Bdata, block * N * 2, ncclDouble, 0, A.DupComm, stream);
     ncclGroupEnd();
 
     if (M < lenA)
@@ -135,9 +135,9 @@ void compute_factorize(deviceHandle_t handle, deviceMatrixDesc_t A, deviceMatrix
     }
     cublasZgemvStridedBatched(cublasH, CUBLAS_OP_N, M * rank, reduc_len, &one, A.ACdata, M * rblock, M * rank, A.ONEdata, 1, 0, &zero, A.Bdata, 1, M * rank, rank);
 
-    thrust::device_ptr<THRUST_CTYPE> ACptr(reinterpret_cast<THRUST_CTYPE*>(A.Bdata));
-    auto Aiter = thrust::make_transform_iterator(inc_iter, StridedBlock(rank, rank, bdim, reinterpret_cast<THRUST_CTYPE**>(A.A_ss)));
-    thrust::transform(thrust::cuda::par.on(stream), Aiter, Aiter + (rblock * M), ACptr, Aiter, thrust::plus<THRUST_CTYPE>());
+    thrust::device_ptr<thrust::complex<double>> ACptr(reinterpret_cast<thrust::complex<double>*>(A.Bdata));
+    auto Aiter = thrust::make_transform_iterator(inc_iter, StridedBlock(rank, rank, bdim, reinterpret_cast<thrust::complex<double>**>(A.A_ss)));
+    thrust::transform(thrust::cuda::par.on(stream), Aiter, Aiter + (rblock * M), ACptr, Aiter, thrust::plus<thrust::complex<double>>());
   }
 }
 
@@ -156,11 +156,11 @@ void compute_forward_substitution(deviceHandle_t handle, deviceMatrixDesc_t A, c
   cudaStream_t stream = handle->compute_stream;
   cublasHandle_t cublasH = handle->cublasH;
 
-  STD_CTYPE constants[3] = { 1., 0., -1. };
-  CUDA_CTYPE& one = reinterpret_cast<CUDA_CTYPE&>(constants[0]);
-  CUDA_CTYPE& zero = reinterpret_cast<CUDA_CTYPE&>(constants[1]);
-  CUDA_CTYPE& minus_one = reinterpret_cast<CUDA_CTYPE&>(constants[2]);
-  const CUDA_CTYPE* X_in = reinterpret_cast<const CUDA_CTYPE*>(&X[A.lower_offset]);
+  std::complex<double> constants[3] = { 1., 0., -1. };
+  cuDoubleComplex& one = reinterpret_cast<cuDoubleComplex&>(constants[0]);
+  cuDoubleComplex& zero = reinterpret_cast<cuDoubleComplex&>(constants[1]);
+  cuDoubleComplex& minus_one = reinterpret_cast<cuDoubleComplex&>(constants[2]);
+  const cuDoubleComplex* X_in = reinterpret_cast<const cuDoubleComplex*>(&X[A.lower_offset]);
 
   cublasZgemmStridedBatched(cublasH, CUBLAS_OP_N, CUBLAS_OP_N, bdim, 1, bdim, &one, A.Vdata, bdim, block, X_in, bdim, bdim, &zero, &(A.Ydata)[D * bdim], bdim, bdim, M);
 
@@ -169,17 +169,17 @@ void compute_forward_substitution(deviceHandle_t handle, deviceMatrixDesc_t A, c
     for (long long p = 0; p < A.LenComms; p++) {
       long long start = A.Neighbor[p] * bdim;
       long long len = A.Neighbor[p + 1] * bdim - start;
-      ncclBroadcast(const_cast<const CUDA_CTYPE*>(&(A.Ydata)[start]), &(A.Ydata)[start], len * 2, ncclDouble, A.NeighborRoots[p], A.NeighborComms[p], stream);
+      ncclBroadcast(const_cast<const cuDoubleComplex*>(&(A.Ydata)[start]), &(A.Ydata)[start], len * 2, ncclDouble, A.NeighborRoots[p], A.NeighborComms[p], stream);
     }
     if (A.DupComm)
-      ncclBroadcast(const_cast<const CUDA_CTYPE*>(A.Ydata), A.Ydata, bdim * N * 2, ncclDouble, 0, A.DupComm, stream);
+      ncclBroadcast(const_cast<const cuDoubleComplex*>(A.Ydata), A.Ydata, bdim * N * 2, ncclDouble, 0, A.DupComm, stream);
     ncclGroupEnd();
   }
 
-  size_t sizeX = rank * sizeof(CUDA_CTYPE);
-  cudaMemcpy2DAsync(&(A.Xdata)[D * rank], sizeX, &(A.Ydata)[D * bdim], bdim * sizeof(CUDA_CTYPE), sizeX, M, cudaMemcpyDeviceToDevice, stream);
+  size_t sizeX = rank * sizeof(cuDoubleComplex);
+  cudaMemcpy2DAsync(&(A.Xdata)[D * rank], sizeX, &(A.Ydata)[D * bdim], bdim * sizeof(cuDoubleComplex), sizeX, M, cudaMemcpyDeviceToDevice, stream);
   if (0 < rank && 0 < rdim) {
-    cudaMemsetAsync(A.ACdata, 0, reduc_len * M * rank * sizeof(CUDA_CTYPE), stream);
+    cudaMemsetAsync(A.ACdata, 0, reduc_len * M * rank * sizeof(cuDoubleComplex), stream);
     cublasZgemmBatched(cublasH, CUBLAS_OP_N, CUBLAS_OP_N, rank, 1, rdim, &minus_one, A.A_sr, bdim, A.Y_R_cols, bdim, &zero, A.AC_X, rank, lenA);
     cublasZgemv(cublasH, CUBLAS_OP_N, M * rank, reduc_len, &one, A.ACdata, M * rank, A.ONEdata, 1, &one, &(A.Xdata)[D * rank], 1);
   }
@@ -189,10 +189,10 @@ void compute_forward_substitution(deviceHandle_t handle, deviceMatrixDesc_t A, c
     for (long long p = 0; p < A.LenComms; p++) {
       long long start = A.Neighbor[p] * rank;
       long long len = A.Neighbor[p + 1] * rank - start;
-      ncclBroadcast(const_cast<const CUDA_CTYPE*>(&(A.Xdata)[start]), &(A.Xdata)[start], len * 2, ncclDouble, A.NeighborRoots[p], A.NeighborComms[p], stream);
+      ncclBroadcast(const_cast<const cuDoubleComplex*>(&(A.Xdata)[start]), &(A.Xdata)[start], len * 2, ncclDouble, A.NeighborRoots[p], A.NeighborComms[p], stream);
     }
     if (A.DupComm)
-      ncclBroadcast(const_cast<const CUDA_CTYPE*>(A.Xdata), A.Xdata, rank * N * 2, ncclDouble, 0, A.DupComm, stream);
+      ncclBroadcast(const_cast<const cuDoubleComplex*>(A.Xdata), A.Xdata, rank * N * 2, ncclDouble, 0, A.DupComm, stream);
     ncclGroupEnd();
   }
 }
@@ -212,28 +212,28 @@ void compute_backward_substitution(deviceHandle_t handle, deviceMatrixDesc_t A, 
   cudaStream_t stream = handle->compute_stream;
   cublasHandle_t cublasH = handle->cublasH;
 
-  STD_CTYPE constants[3] = { 1., 0., -1. };
-  CUDA_CTYPE& one = reinterpret_cast<CUDA_CTYPE&>(constants[0]);
-  CUDA_CTYPE& zero = reinterpret_cast<CUDA_CTYPE&>(constants[1]);
-  CUDA_CTYPE& minus_one = reinterpret_cast<CUDA_CTYPE&>(constants[2]);
-  CUDA_CTYPE* X_out = reinterpret_cast<CUDA_CTYPE*>(&X[A.lower_offset]);
+  std::complex<double> constants[3] = { 1., 0., -1. };
+  cuDoubleComplex& one = reinterpret_cast<cuDoubleComplex&>(constants[0]);
+  cuDoubleComplex& zero = reinterpret_cast<cuDoubleComplex&>(constants[1]);
+  cuDoubleComplex& minus_one = reinterpret_cast<cuDoubleComplex&>(constants[2]);
+  cuDoubleComplex* X_out = reinterpret_cast<cuDoubleComplex*>(&X[A.lower_offset]);
 
   if (1 < N) {
     ncclGroupStart();
     for (long long p = 0; p < A.LenComms; p++) {
       long long start = A.Neighbor[p] * rank;
       long long len = A.Neighbor[p + 1] * rank - start;
-      ncclBroadcast(const_cast<const CUDA_CTYPE*>(&(A.Xdata)[start]), &(A.Xdata)[start], len * 2, ncclDouble, A.NeighborRoots[p], A.NeighborComms[p], stream);
+      ncclBroadcast(const_cast<const cuDoubleComplex*>(&(A.Xdata)[start]), &(A.Xdata)[start], len * 2, ncclDouble, A.NeighborRoots[p], A.NeighborComms[p], stream);
     }
     if (A.DupComm)
-      ncclBroadcast(const_cast<const CUDA_CTYPE*>(A.Xdata), A.Xdata, rank * N * 2, ncclDouble, 0, A.DupComm, stream);
+      ncclBroadcast(const_cast<const cuDoubleComplex*>(A.Xdata), A.Xdata, rank * N * 2, ncclDouble, 0, A.DupComm, stream);
     ncclGroupEnd();
   }
 
-  size_t sizeX = rank * sizeof(CUDA_CTYPE);
-  cudaMemcpy2DAsync(&(A.Ydata)[D * bdim], bdim * sizeof(CUDA_CTYPE), &(A.Xdata)[D * rank], sizeX, sizeX, M, cudaMemcpyDeviceToDevice, stream);
+  size_t sizeX = rank * sizeof(cuDoubleComplex);
+  cudaMemcpy2DAsync(&(A.Ydata)[D * bdim], bdim * sizeof(cuDoubleComplex), &(A.Xdata)[D * rank], sizeX, sizeX, M, cudaMemcpyDeviceToDevice, stream);
   if (0 < rank && 0 < rdim) {
-    cudaMemsetAsync(A.ACdata, 0, reduc_len * M * bdim * sizeof(CUDA_CTYPE), stream);
+    cudaMemsetAsync(A.ACdata, 0, reduc_len * M * bdim * sizeof(cuDoubleComplex), stream);
     cublasZgemmBatched(cublasH, CUBLAS_OP_N, CUBLAS_OP_N, rdim, 1, rank, &minus_one, A.A_rs, bdim, A.X_cols, bdim, &zero, A.AC_X_R, bdim, lenA);
     cublasZgemv(cublasH, CUBLAS_OP_N, M * bdim, reduc_len, &one, A.ACdata, M * bdim, A.ONEdata, 1, &one, &(A.Ydata)[D * bdim], 1);
   }

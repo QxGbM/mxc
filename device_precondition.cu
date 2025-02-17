@@ -65,43 +65,43 @@ void createMatrixDesc(deviceMatrixDesc_t* desc, long long bdim, long long rank, 
   const thrust::tuple<long long, long long, long long>* commLA = reinterpret_cast<const thrust::tuple<long long, long long, long long>*>(comm.LowerIndA.data());
   thrust::device_vector<thrust::tuple<long long, long long, long long>> LInd(commLA, commLA + lenLA);
 
-  cudaMalloc(reinterpret_cast<void**>(&desc->A_ss), lenA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->A_sr), lenA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->A_rs), lenA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->A_rr), lenA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->A_sr_rows), lenA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->A_dst), lenLA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->A_unsort), lenA * sizeof(CUDA_CTYPE*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->A_ss), lenA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->A_sr), lenA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->A_rs), lenA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->A_rr), lenA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->A_sr_rows), lenA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->A_dst), lenLA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->A_unsort), lenA * sizeof(cuDoubleComplex*));
 
-  cudaMalloc(reinterpret_cast<void**>(&desc->U_cols), lenA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->U_R), M * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->V_rows), lenA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->V_R), M * sizeof(CUDA_CTYPE*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->U_cols), lenA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->U_R), M * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->V_rows), lenA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->V_R), M * sizeof(cuDoubleComplex*));
 
-  cudaMalloc(reinterpret_cast<void**>(&desc->B_ind), N * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->B_cols), lenA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->B_R), lenA * sizeof(CUDA_CTYPE*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->B_ind), N * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->B_cols), lenA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->B_R), lenA * sizeof(cuDoubleComplex*));
 
-  cudaMalloc(reinterpret_cast<void**>(&desc->X_cols), lenA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->Y_R_cols), lenA * sizeof(CUDA_CTYPE*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->X_cols), lenA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->Y_R_cols), lenA * sizeof(cuDoubleComplex*));
 
-  cudaMalloc(reinterpret_cast<void**>(&desc->AC_X), lenA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->AC_X_R), lenA * sizeof(CUDA_CTYPE*));
-  cudaMalloc(reinterpret_cast<void**>(&desc->AC_ind), lenA * sizeof(CUDA_CTYPE*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->AC_X), lenA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->AC_X_R), lenA * sizeof(cuDoubleComplex*));
+  cudaMalloc(reinterpret_cast<void**>(&desc->AC_ind), lenA * sizeof(cuDoubleComplex*));
 
   long long block = bdim * bdim;
   long long rblock = rank * rank;
   long long acc_len = desc->reducLen * M * std::max(rblock, bdim);
 
-  cudaMalloc(reinterpret_cast<void**>(&desc->Adata), lenA * block * sizeof(CUDA_CTYPE));
-  cudaMalloc(reinterpret_cast<void**>(&desc->Udata), N * block * sizeof(CUDA_CTYPE));
-  cudaMalloc(reinterpret_cast<void**>(&desc->Vdata), M * block * sizeof(CUDA_CTYPE));
-  cudaMalloc(reinterpret_cast<void**>(&desc->Bdata), N * block * sizeof(CUDA_CTYPE));
-  cudaMalloc(reinterpret_cast<void**>(&desc->ACdata), acc_len * sizeof(CUDA_CTYPE));
+  cudaMalloc(reinterpret_cast<void**>(&desc->Adata), lenA * block * sizeof(cuDoubleComplex));
+  cudaMalloc(reinterpret_cast<void**>(&desc->Udata), N * block * sizeof(cuDoubleComplex));
+  cudaMalloc(reinterpret_cast<void**>(&desc->Vdata), M * block * sizeof(cuDoubleComplex));
+  cudaMalloc(reinterpret_cast<void**>(&desc->Bdata), N * block * sizeof(cuDoubleComplex));
+  cudaMalloc(reinterpret_cast<void**>(&desc->ACdata), acc_len * sizeof(cuDoubleComplex));
 
-  cudaMalloc(reinterpret_cast<void**>(&desc->Xdata), N * bdim * sizeof(CUDA_CTYPE));
-  cudaMalloc(reinterpret_cast<void**>(&desc->Ydata), N * bdim * sizeof(CUDA_CTYPE));
-  cudaMalloc(reinterpret_cast<void**>(&desc->ONEdata), desc->reducLen * sizeof(CUDA_CTYPE));
+  cudaMalloc(reinterpret_cast<void**>(&desc->Xdata), N * bdim * sizeof(cuDoubleComplex));
+  cudaMalloc(reinterpret_cast<void**>(&desc->Ydata), N * bdim * sizeof(cuDoubleComplex));
+  cudaMalloc(reinterpret_cast<void**>(&desc->ONEdata), desc->reducLen * sizeof(cuDoubleComplex));
   cudaMalloc(reinterpret_cast<void**>(&desc->Ipiv), M * bdim * sizeof(int));
   cudaMalloc(reinterpret_cast<void**>(&desc->Info), M * sizeof(int));
 
@@ -109,31 +109,31 @@ void createMatrixDesc(deviceMatrixDesc_t* desc, long long bdim, long long rank, 
   auto rwise_diag_iter = thrust::make_permutation_iterator(AInd.begin(), ARows.begin());
   long long offset_SR = rank * bdim, offset_RS = rank, offset_RR = rank * (bdim + 1);
 
-  thrust::transform(AInd.begin(), AInd.end(), thrust::device_ptr<CUDA_CTYPE*>(desc->A_ss), setDevicePtr(desc->Adata, block));
-  thrust::transform(AInd.begin(), AInd.end(), thrust::device_ptr<CUDA_CTYPE*>(desc->A_sr), setDevicePtr(&(desc->Adata)[offset_SR], block));
-  thrust::transform(AInd.begin(), AInd.end(), thrust::device_ptr<CUDA_CTYPE*>(desc->A_rs), setDevicePtr(&(desc->Adata)[offset_RS], block));
-  thrust::transform(AInd.begin(), AInd.end(), thrust::device_ptr<CUDA_CTYPE*>(desc->A_rr), setDevicePtr(&(desc->Adata)[offset_RR], block));
-  thrust::transform(rwise_diag_iter, rwise_diag_iter + lenA, thrust::device_ptr<CUDA_CTYPE*>(desc->A_sr_rows), setDevicePtr(&(desc->Adata)[offset_SR], block));
-  thrust::transform(LInd.begin(), LInd.end(), thrust::device_ptr<CUDA_CTYPE*>(desc->A_dst), setDevicePtr(desc->Adata, block, bdim * lower.rank, lower.rank));
-  thrust::transform(inc_iter, inc_iter + lenA, thrust::device_ptr<const CUDA_CTYPE*>(desc->A_unsort), setDevicePtr(desc->Adata, block));
+  thrust::transform(AInd.begin(), AInd.end(), thrust::device_ptr<cuDoubleComplex*>(desc->A_ss), setDevicePtr(desc->Adata, block));
+  thrust::transform(AInd.begin(), AInd.end(), thrust::device_ptr<cuDoubleComplex*>(desc->A_sr), setDevicePtr(&(desc->Adata)[offset_SR], block));
+  thrust::transform(AInd.begin(), AInd.end(), thrust::device_ptr<cuDoubleComplex*>(desc->A_rs), setDevicePtr(&(desc->Adata)[offset_RS], block));
+  thrust::transform(AInd.begin(), AInd.end(), thrust::device_ptr<cuDoubleComplex*>(desc->A_rr), setDevicePtr(&(desc->Adata)[offset_RR], block));
+  thrust::transform(rwise_diag_iter, rwise_diag_iter + lenA, thrust::device_ptr<cuDoubleComplex*>(desc->A_sr_rows), setDevicePtr(&(desc->Adata)[offset_SR], block));
+  thrust::transform(LInd.begin(), LInd.end(), thrust::device_ptr<cuDoubleComplex*>(desc->A_dst), setDevicePtr(desc->Adata, block, bdim * lower.rank, lower.rank));
+  thrust::transform(inc_iter, inc_iter + lenA, thrust::device_ptr<const cuDoubleComplex*>(desc->A_unsort), setDevicePtr(desc->Adata, block));
 
-  thrust::transform(ACols.begin(), ACols.end(), thrust::device_ptr<CUDA_CTYPE*>(desc->U_cols), setDevicePtr(desc->Udata, block));
-  thrust::transform(ACols.begin(), ACols.begin() + M, thrust::device_ptr<CUDA_CTYPE*>(desc->U_R), setDevicePtr(&(desc->Udata)[offset_SR], block));
-  thrust::transform(ARows.begin(), ARows.end(), thrust::device_ptr<CUDA_CTYPE*>(desc->V_rows), setDevicePtr(desc->Vdata, block));
-  thrust::transform(inc_iter, inc_iter + M, thrust::device_ptr<CUDA_CTYPE*>(desc->V_R), setDevicePtr(&(desc->Vdata)[offset_RS], block));
+  thrust::transform(ACols.begin(), ACols.end(), thrust::device_ptr<cuDoubleComplex*>(desc->U_cols), setDevicePtr(desc->Udata, block));
+  thrust::transform(ACols.begin(), ACols.begin() + M, thrust::device_ptr<cuDoubleComplex*>(desc->U_R), setDevicePtr(&(desc->Udata)[offset_SR], block));
+  thrust::transform(ARows.begin(), ARows.end(), thrust::device_ptr<cuDoubleComplex*>(desc->V_rows), setDevicePtr(desc->Vdata, block));
+  thrust::transform(inc_iter, inc_iter + M, thrust::device_ptr<cuDoubleComplex*>(desc->V_R), setDevicePtr(&(desc->Vdata)[offset_RS], block));
 
-  thrust::transform(inc_iter, inc_iter + N, thrust::device_ptr<CUDA_CTYPE*>(desc->B_ind), setDevicePtr(desc->Bdata, block));
-  thrust::transform(ACols.begin(), ACols.end(), thrust::device_ptr<CUDA_CTYPE*>(desc->B_cols), setDevicePtr(desc->Bdata, block));
-  thrust::transform(ACols.begin(), ACols.end(), thrust::device_ptr<CUDA_CTYPE*>(desc->B_R), setDevicePtr(&(desc->Bdata)[offset_SR], block));
+  thrust::transform(inc_iter, inc_iter + N, thrust::device_ptr<cuDoubleComplex*>(desc->B_ind), setDevicePtr(desc->Bdata, block));
+  thrust::transform(ACols.begin(), ACols.end(), thrust::device_ptr<cuDoubleComplex*>(desc->B_cols), setDevicePtr(desc->Bdata, block));
+  thrust::transform(ACols.begin(), ACols.end(), thrust::device_ptr<cuDoubleComplex*>(desc->B_R), setDevicePtr(&(desc->Bdata)[offset_SR], block));
 
-  thrust::transform(ACols.begin(), ACols.end(), thrust::device_ptr<CUDA_CTYPE*>(desc->X_cols), setDevicePtr(desc->Xdata, rank));
-  thrust::transform(ACols.begin(), ACols.end(), thrust::device_ptr<CUDA_CTYPE*>(desc->Y_R_cols), setDevicePtr(&(desc->Ydata)[offset_RS], bdim));
+  thrust::transform(ACols.begin(), ACols.end(), thrust::device_ptr<cuDoubleComplex*>(desc->X_cols), setDevicePtr(desc->Xdata, rank));
+  thrust::transform(ACols.begin(), ACols.end(), thrust::device_ptr<cuDoubleComplex*>(desc->Y_R_cols), setDevicePtr(&(desc->Ydata)[offset_RS], bdim));
 
-  thrust::transform(ARows.begin(), ARows.end(), ADistCols.begin(), thrust::device_ptr<CUDA_CTYPE*>(desc->AC_X), setDevicePtr(desc->ACdata, M * rank, rank));
-  thrust::transform(ARows.begin(), ARows.end(), ADistCols.begin(), thrust::device_ptr<CUDA_CTYPE*>(desc->AC_X_R), setDevicePtr(&(desc->ACdata)[offset_RS], M * bdim, bdim));
-  thrust::transform(ARows.begin(), ARows.end(), ADistCols.begin(), thrust::device_ptr<CUDA_CTYPE*>(desc->AC_ind), setDevicePtr(desc->ACdata, M * rblock, rblock));
+  thrust::transform(ARows.begin(), ARows.end(), ADistCols.begin(), thrust::device_ptr<cuDoubleComplex*>(desc->AC_X), setDevicePtr(desc->ACdata, M * rank, rank));
+  thrust::transform(ARows.begin(), ARows.end(), ADistCols.begin(), thrust::device_ptr<cuDoubleComplex*>(desc->AC_X_R), setDevicePtr(&(desc->ACdata)[offset_RS], M * bdim, bdim));
+  thrust::transform(ARows.begin(), ARows.end(), ADistCols.begin(), thrust::device_ptr<cuDoubleComplex*>(desc->AC_ind), setDevicePtr(desc->ACdata, M * rblock, rblock));
   
-  thrust::fill(thrust::device_ptr<CUDA_CTYPE>(desc->ONEdata), thrust::device_ptr<CUDA_CTYPE>(&(desc->ONEdata)[desc->reducLen]), make_cuDoubleComplex(1., 0.));
+  thrust::fill(thrust::device_ptr<cuDoubleComplex>(desc->ONEdata), thrust::device_ptr<cuDoubleComplex>(&(desc->ONEdata)[desc->reducLen]), make_cuDoubleComplex(1., 0.));
 
   desc->Neighbor = reinterpret_cast<long long*>(std::malloc(comm.BoxOffsets.size() * sizeof(long long)));
   std::copy(comm.BoxOffsets.begin(), comm.BoxOffsets.end(), desc->Neighbor);
@@ -195,14 +195,14 @@ void destroyMatrixDesc(deviceMatrixDesc_t desc) {
   }
 }
 
-void copyDataInMatrixDesc(deviceMatrixDesc_t desc, const STD_CTYPE* A, const STD_CTYPE* U, cudaStream_t stream) {
-  long long block = desc.bdim * desc.bdim * sizeof(CUDA_CTYPE);
+void copyDataInMatrixDesc(deviceMatrixDesc_t desc, const std::complex<double>* A, const std::complex<double>* U, cudaStream_t stream) {
+  long long block = desc.bdim * desc.bdim * sizeof(cuDoubleComplex);
   cudaMemcpyAsync(desc.Adata, A, block * desc.lenA, cudaMemcpyHostToDevice, stream);
   cudaMemcpyAsync(desc.Udata, U, block * desc.lenN, cudaMemcpyHostToDevice, stream);
 }
 
-void copyDataOutMatrixDesc(deviceMatrixDesc_t desc, STD_CTYPE* A, STD_CTYPE* V, cudaStream_t stream) {
-  long long block = desc.bdim * desc.bdim * sizeof(CUDA_CTYPE);
+void copyDataOutMatrixDesc(deviceMatrixDesc_t desc, std::complex<double>* A, std::complex<double>* V, cudaStream_t stream) {
+  long long block = desc.bdim * desc.bdim * sizeof(cuDoubleComplex);
   cudaMemcpyAsync(A, desc.Adata, block * desc.lenA, cudaMemcpyDeviceToHost, stream);
   cudaMemcpyAsync(V, desc.Vdata, block * desc.lenM, cudaMemcpyDeviceToHost, stream);
 }

@@ -53,7 +53,7 @@ void H2MatrixSolver::init_gpu_handles(const ncclComms nccl_comms) {
   }
 
   long long lenX = bdim * comm[levels].lenLocal();
-  cudaMalloc(reinterpret_cast<void**>(&X_dev), lenX * sizeof(CUDA_CTYPE));
+  cudaMalloc(reinterpret_cast<void**>(&X_dev), lenX * sizeof(cuDoubleComplex));
 }
 
 void H2MatrixSolver::allocSparseMV(deviceHandle_t handle, const ncclComms nccl_comms) {
